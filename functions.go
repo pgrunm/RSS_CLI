@@ -40,7 +40,7 @@ func ParseFeeds(siteURL, proxyURL string) {
 
 		fmt.Println(feed.Link)
 		for _, e := range feed.Items {
-			fmt.Println(e.Title)
+			fmt.Printf("%s: %s\n", e.Title, e.Link)
 		}
 	}
 
