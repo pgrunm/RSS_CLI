@@ -22,11 +22,18 @@ func main() {
 	proxy := viper.GetString("Proxy")
 
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		fmt.Fprint(w, "Welcome to my website!")
+		// Log to console that site was accessed
+		log.Println("Site was accessed.")
+
+		for _, feed := range feeds {
+			rssFeeds := ParseFeeds(feed, proxy)
+
+			for _, rss := range rssFeeds.Items {
+				// Needs some more formatting!
+				fmt.Fprintf(w, "%s: %s\n", rss.Title, rss.Link)
+			}
+		}
 	})
 	http.ListenAndServe(":80", nil)
-	for _, feed := range feeds {
-		ParseFeeds(feed, proxy)
-	}
 
 }

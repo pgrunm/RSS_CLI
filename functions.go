@@ -10,7 +10,7 @@ import (
 )
 
 // ParseFeeds allows to get feeds from a site.
-func ParseFeeds(siteURL, proxyURL string) {
+func ParseFeeds(siteURL, proxyURL string) *gofeed.Feed {
 	// Proxy URL see https://stackoverflow.com/questions/14661511/setting-up-proxy-for-http-client
 	var client http.Client
 
@@ -38,10 +38,8 @@ func ParseFeeds(siteURL, proxyURL string) {
 		fp := gofeed.NewParser()
 		feed, _ := fp.ParseString(string(body))
 
-		fmt.Println(feed.Link)
-		for _, e := range feed.Items {
-			fmt.Printf("%s: %s\n", e.Title, e.Link)
-		}
+		// Return the feed with all its items.
+		return feed
 	}
-
+	return nil
 }
