@@ -1,0 +1,5 @@
+Feeds:
+  - "https://rss.golem.de/rss.php?feed=RSS2.0"
+  - "https://www.heise.de/rss/heise-atom.xml"
+
+Proxy: ""
