@@ -23,14 +23,16 @@ func main() {
 
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		// Log to console that site was accessed
-		log.Println("Site was accessed.")
+		log.Printf("Site was accessed from %s.", r.RemoteAddr)
 
 		for _, feed := range feeds {
 			rssFeeds := ParseFeeds(feed, proxy)
 
+			// Print the title of the news site
+			fmt.Fprintf(w, "<p>%s </p>", rssFeeds.Title)
 			for _, rss := range rssFeeds.Items {
 				// Needs some more formatting!
-				fmt.Fprintf(w, "%s: %s\n", rss.Title, rss.Link)
+				fmt.Fprintf(w, "<a href=%s>%s</a> <br>", rss.Link, rss.Title)
 			}
 		}
 	})
