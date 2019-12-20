@@ -6,6 +6,7 @@ import (
 	"log"
 	"net/http"
 	"net/url"
+	"time"
 
 	"github.com/mmcdole/gofeed"
 	"github.com/patrickmn/go-cache"
@@ -13,6 +14,10 @@ import (
 
 // ParseFeeds allows to get feeds from a site.
 func ParseFeeds(siteURL, proxyURL string) *gofeed.Feed {
+
+	// Measure the execution time of this function
+	defer duration(track("ParseFeeds for site " + siteURL))
+
 	// Proxy URL see https://stackoverflow.com/questions/14661511/setting-up-proxy-for-http-client
 	var client http.Client
 
@@ -28,15 +33,12 @@ func ParseFeeds(siteURL, proxyURL string) *gofeed.Feed {
 		client = http.Client{}
 	}
 
-
 	item, found := c.Get(siteURL)
 	if found {
-		log.Printf("Cache hit for site: %s", siteURL)
 
 		//  Type assertion see: https://golangcode.com/convert-interface-to-number/
 		return item.(*gofeed.Feed)
 	}
-	log.Printf("No cache hit for site: %s", siteURL)
 	// Get the Feed of the particular website
 	resp, err := client.Get(siteURL)
 
@@ -57,4 +59,13 @@ func ParseFeeds(siteURL, proxyURL string) *gofeed.Feed {
 	}
 
 	return nil
+}
+
+// Source: https://yourbasic.org/golang/measure-execution-time/
+func track(msg string) (string, time.Time) {
+	return msg, time.Now()
+}
+
+func duration(msg string, start time.Time) {
+	log.Printf("%v: %v\n", msg, time.Since(start))
 }
