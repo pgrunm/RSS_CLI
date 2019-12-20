@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/fsnotify/fsnotify"
 	"github.com/patrickmn/go-cache"
 	"github.com/spf13/viper"
 )
@@ -16,17 +17,28 @@ var (
 )
 
 func main() {
+	var feeds []string
+	var proxy string
+
 	viper.SetConfigName("config")
 	viper.SetConfigType("yaml")
 	viper.AddConfigPath(".")
+	viper.WatchConfig()
+
+	// If config file is changed update all configuration values
+	viper.OnConfigChange(func(e fsnotify.Event) {
+		log.Println("Config file changed:", e.Name)
+		feeds = viper.GetStringSlice("Feeds")
+		proxy = viper.GetString("Proxy")
+	})
 
 	if err := viper.ReadInConfig(); err != nil {
 		log.Fatalf("Error reading config file, %s", err)
 	}
 
 	// Parse configuration
-	feeds := viper.GetStringSlice("Feeds")
-	proxy := viper.GetString("Proxy")
+	feeds = viper.GetStringSlice("Feeds")
+	proxy = viper.GetString("Proxy")
 
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		// Log to console that site was accessed
