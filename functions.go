@@ -3,10 +3,12 @@ package main
 import (
 	"fmt"
 	"io/ioutil"
+	"log"
 	"net/http"
 	"net/url"
 
 	"github.com/mmcdole/gofeed"
+	"github.com/patrickmn/go-cache"
 )
 
 // ParseFeeds allows to get feeds from a site.
@@ -26,6 +28,15 @@ func ParseFeeds(siteURL, proxyURL string) *gofeed.Feed {
 		client = http.Client{}
 	}
 
+
+	item, found := c.Get(siteURL)
+	if found {
+		log.Printf("Cache hit for site: %s", siteURL)
+
+		//  Type assertion see: https://golangcode.com/convert-interface-to-number/
+		return item.(*gofeed.Feed)
+	}
+	log.Printf("No cache hit for site: %s", siteURL)
 	// Get the Feed of the particular website
 	resp, err := client.Get(siteURL)
 
@@ -38,8 +49,12 @@ func ParseFeeds(siteURL, proxyURL string) *gofeed.Feed {
 		fp := gofeed.NewParser()
 		feed, _ := fp.ParseString(string(body))
 
+		c.Set(siteURL, feed, cache.DefaultExpiration)
+
 		// Return the feed with all its items.
 		return feed
+
 	}
+
 	return nil
 }

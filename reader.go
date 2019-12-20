@@ -4,8 +4,15 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"time"
 
+	"github.com/patrickmn/go-cache"
 	"github.com/spf13/viper"
+)
+
+var (
+	// Adding a cache with 5 min expiration and deletion after 10 mins
+	c = cache.New(5*time.Minute, 10*time.Minute)
 )
 
 func main() {
