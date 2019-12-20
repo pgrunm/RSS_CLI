@@ -57,4 +57,6 @@ func main() {
 	})
 	http.ListenAndServe(":80", nil)
 
+	// Notify about the started website
+	log.Println("Service started: open http://127.0.0.1 in browser")
 }
