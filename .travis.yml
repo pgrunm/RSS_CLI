@@ -7,7 +7,4 @@ deploy:
   api_key: $GH_OAUTH_TOKEN
   file: "rss_cli"
   skip_cleanup: true
-  on:
-    tags: true
-
   overwrite: true
