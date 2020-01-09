@@ -13,10 +13,16 @@ import (
 )
 
 // ParseFeeds allows to get feeds from a site.
-func ParseFeeds(siteURL, proxyURL string) (*gofeed.Feed, error) {
+func ParseFeeds(siteURL, proxyURL string, news chan *gofeed.Feed, chFinished chan bool) {
 
 	// Measure the execution time of this function
 	defer duration(track("ParseFeeds for site " + siteURL))
+
+	// When finished, write it to the channel
+	defer func() {
+		// Notify that we're done after this function
+		chFinished <- true
+	}()
 
 	// Proxy URL see https://stackoverflow.com/questions/14661511/setting-up-proxy-for-http-client
 	var client http.Client
@@ -36,7 +42,7 @@ func ParseFeeds(siteURL, proxyURL string) (*gofeed.Feed, error) {
 	item, found := c.Get(siteURL)
 	if found {
 		//  Type assertion see: https://golangcode.com/convert-interface-to-number/
-		return item.(*gofeed.Feed), nil
+		news <- item.(*gofeed.Feed)
 	}
 
 	// Changed this to NewRequest as the golang docs says you need this for custom headers
@@ -64,11 +70,12 @@ func ParseFeeds(siteURL, proxyURL string) (*gofeed.Feed, error) {
 			c.Set(siteURL, feed, cache.DefaultExpiration)
 
 			// Return the feed with all its items.
-			return feed, nil
+			if item != nil {
+				news <- item.(*gofeed.Feed)
+
+			}
 		}
-		return nil, fmt.Errorf("Return code for site %s was different than 200: %d", siteURL, resp.StatusCode)
 	}
-	return nil, nil
 
 }
 
