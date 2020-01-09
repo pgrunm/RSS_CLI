@@ -26,6 +26,10 @@ func main() {
 	viper.AddConfigPath(".")
 	viper.WatchConfig()
 
+	// Rate Limiting
+	rate := time.Second / 10
+	throttle := time.Tick(rate)
+
 	// If config file is changed update all configuration values
 	viper.OnConfigChange(func(e fsnotify.Event) {
 		log.Println("Config file changed:", e.Name)
@@ -52,6 +56,7 @@ func main() {
 		log.Printf("Site was accessed from %s.", r.RemoteAddr)
 
 		for _, feed := range feeds {
+			<-throttle // rate limit the feed parsing
 			go ParseFeeds(feed, proxy, chNews, chFinished)
 		}
 
