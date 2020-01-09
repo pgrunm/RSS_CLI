@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/fsnotify/fsnotify"
+	"github.com/mmcdole/gofeed"
 	"github.com/patrickmn/go-cache"
 	"github.com/spf13/viper"
 )
@@ -41,21 +42,35 @@ func main() {
 	proxy = viper.GetString("Proxy")
 
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		gotUrls := make(map[string]*gofeed.Feed)
+
+		// Creating Channels
+		chNews := make(chan *gofeed.Feed)
+		chFinished := make(chan bool) // To check if the call have finished
+
 		// Log to console that site was accessed
 		log.Printf("Site was accessed from %s.", r.RemoteAddr)
 
 		for _, feed := range feeds {
-			rssFeeds, err := ParseFeeds(feed, proxy)
+			go ParseFeeds(feed, proxy, chNews, chFinished)
+		}
 
-			if err != nil {
-				fmt.Println(err)
-			} else {
-				// Print the title of the news site
-				fmt.Fprintf(w, "<p>%s </p>", rssFeeds.Title)
-				for _, rss := range rssFeeds.Items {
-					// Needs some more formatting!
-					fmt.Fprintf(w, "<a href=%s>%s</a> <br>", rss.Link, rss.Title)
-				}
+		// Subscribe to both channels
+		for c := 0; c < len(feeds); {
+			select {
+			case site := <-chNews:
+				gotUrls[site.Title] = site
+			case <-chFinished:
+				c++
+			}
+		}
+
+		for _, rssFeeds := range gotUrls {
+			// Print the title of the news site
+			fmt.Fprintf(w, "<p>%s </p>", rssFeeds.Title)
+			for _, rss := range rssFeeds.Items {
+				// Needs some more formatting!
+				fmt.Fprintf(w, "<a href=%s>%s</a> <br>", rss.Link, rss.Title)
 			}
 		}
 	})
