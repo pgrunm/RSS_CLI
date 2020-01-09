@@ -13,16 +13,13 @@ import (
 )
 
 // ParseFeeds allows to get feeds from a site.
-func ParseFeeds(siteURL, proxyURL string, news chan *gofeed.Feed, chFinished chan bool) {
+func ParseFeeds(siteURL, proxyURL string, news chan<- *gofeed.Feed) {
 
 	// Measure the execution time of this function
 	defer duration(track("ParseFeeds for site " + siteURL))
 
 	// When finished, write it to the channel
-	defer func() {
-		// Notify that we're done after this function
-		chFinished <- true
-	}()
+	defer wg.Done()
 
 	// Proxy URL see https://stackoverflow.com/questions/14661511/setting-up-proxy-for-http-client
 	var client http.Client
@@ -43,40 +40,38 @@ func ParseFeeds(siteURL, proxyURL string, news chan *gofeed.Feed, chFinished cha
 	if found {
 		//  Type assertion see: https://golangcode.com/convert-interface-to-number/
 		news <- item.(*gofeed.Feed)
-	}
-
-	// Changed this to NewRequest as the golang docs says you need this for custom headers
-	req, err := http.NewRequest("GET", siteURL, nil)
-	if err != nil {
-		log.Fatalln(err)
-	}
-
-	// Set a custom user header because some site block away default crawlers
-	req.Header.Set("User-Agent", "Golang/RSS_Reader by Warryz")
-
-	// Get the Feed of the particular website
-	resp, err := client.Do(req)
-
-	if err != nil {
-		fmt.Println(err)
 	} else {
-		defer resp.Body.Close()
-		if resp.StatusCode == 200 {
-			// Read the response and parse it as string
-			body, _ := ioutil.ReadAll(resp.Body)
-			fp := gofeed.NewParser()
-			feed, _ := fp.ParseString(string(body))
 
-			c.Set(siteURL, feed, cache.DefaultExpiration)
+		// Changed this to NewRequest as the golang docs says you need this for custom headers
+		req, err := http.NewRequest("GET", siteURL, nil)
+		if err != nil {
+			log.Fatalln(err)
+		}
 
-			// Return the feed with all its items.
-			if item != nil {
-				news <- item.(*gofeed.Feed)
+		// Set a custom user header because some site block away default crawlers
+		req.Header.Set("User-Agent", "Golang/RSS_Reader by Warryz")
 
+		// Get the Feed of the particular website
+		resp, err := client.Do(req)
+
+		if err != nil {
+			fmt.Println(err)
+		} else {
+			defer resp.Body.Close()
+			if resp.StatusCode == 200 {
+				// Read the response and parse it as string
+				body, _ := ioutil.ReadAll(resp.Body)
+				fp := gofeed.NewParser()
+				feed, _ := fp.ParseString(string(body))
+
+				// Return the feed with all its items.
+				if feed != nil {
+					c.Set(siteURL, feed, cache.DefaultExpiration)
+					news <- feed
+				}
 			}
 		}
 	}
-
 }
 
 // Source: https://yourbasic.org/golang/measure-execution-time/

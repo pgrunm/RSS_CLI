@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"sync"
 	"time"
 
 	"github.com/fsnotify/fsnotify"
@@ -15,6 +16,9 @@ import (
 var (
 	// Adding a cache with 5 min expiration and deletion after 10 mins
 	c = cache.New(5*time.Minute, 10*time.Minute)
+
+	// Create a wait group
+	wg sync.WaitGroup
 )
 
 func main() {
@@ -46,31 +50,23 @@ func main() {
 	proxy = viper.GetString("Proxy")
 
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		gotUrls := make(map[string]*gofeed.Feed)
-
 		// Creating Channels
-		chNews := make(chan *gofeed.Feed)
-		chFinished := make(chan bool) // To check if the call have finished
+		chNews := make(chan *gofeed.Feed, len(feeds))
 
 		// Log to console that site was accessed
 		log.Printf("Site was accessed from %s.", r.RemoteAddr)
 
 		for _, feed := range feeds {
 			<-throttle // rate limit the feed parsing
-			go ParseFeeds(feed, proxy, chNews, chFinished)
+			wg.Add(1)
+			go ParseFeeds(feed, proxy, chNews)
 		}
 
-		// Subscribe to both channels
-		for c := 0; c < len(feeds); {
-			select {
-			case site := <-chNews:
-				gotUrls[site.Title] = site
-			case <-chFinished:
-				c++
-			}
-		}
+		// Stop execution until the wait group is finished
+		wg.Wait()
+		close(chNews)
 
-		for _, rssFeeds := range gotUrls {
+		for rssFeeds := range chNews {
 			// Print the title of the news site
 			fmt.Fprintf(w, "<p>%s </p>", rssFeeds.Title)
 			for _, rss := range rssFeeds.Items {
