@@ -13,7 +13,7 @@ import (
 )
 
 // ParseFeeds allows to get feeds from a site.
-func ParseFeeds(siteURL, proxyURL string) *gofeed.Feed {
+func ParseFeeds(siteURL, proxyURL string) (*gofeed.Feed, error) {
 
 	// Measure the execution time of this function
 	defer duration(track("ParseFeeds for site " + siteURL))
@@ -35,9 +35,8 @@ func ParseFeeds(siteURL, proxyURL string) *gofeed.Feed {
 
 	item, found := c.Get(siteURL)
 	if found {
-
 		//  Type assertion see: https://golangcode.com/convert-interface-to-number/
-		return item.(*gofeed.Feed)
+		return item.(*gofeed.Feed), nil
 	}
 	// Get the Feed of the particular website
 	resp, err := client.Get(siteURL)
@@ -46,19 +45,21 @@ func ParseFeeds(siteURL, proxyURL string) *gofeed.Feed {
 		fmt.Println(err)
 	} else {
 		defer resp.Body.Close()
-		// Read the response and parse it as string
-		body, _ := ioutil.ReadAll(resp.Body)
-		fp := gofeed.NewParser()
-		feed, _ := fp.ParseString(string(body))
+		if resp.StatusCode == 200 {
+			// Read the response and parse it as string
+			body, _ := ioutil.ReadAll(resp.Body)
+			fp := gofeed.NewParser()
+			feed, _ := fp.ParseString(string(body))
 
-		c.Set(siteURL, feed, cache.DefaultExpiration)
+			c.Set(siteURL, feed, cache.DefaultExpiration)
 
-		// Return the feed with all its items.
-		return feed
-
+			// Return the feed with all its items.
+			return feed, nil
+		}
+		return nil, fmt.Errorf("Return code for site %s was different than 200: %d", siteURL, resp.StatusCode)
 	}
+	return nil, nil
 
-	return nil
 }
 
 // Source: https://yourbasic.org/golang/measure-execution-time/
