@@ -38,8 +38,18 @@ func ParseFeeds(siteURL, proxyURL string) (*gofeed.Feed, error) {
 		//  Type assertion see: https://golangcode.com/convert-interface-to-number/
 		return item.(*gofeed.Feed), nil
 	}
+
+	// Changed this to NewRequest as the golang docs says you need this for custom headers
+	req, err := http.NewRequest("GET", siteURL, nil)
+	if err != nil {
+		log.Fatalln(err)
+	}
+
+	// Set a custom user header because some site block away default crawlers
+	req.Header.Set("User-Agent", "Golang/RSS_Reader by Warryz")
+
 	// Get the Feed of the particular website
-	resp, err := client.Get(siteURL)
+	resp, err := client.Do(req)
 
 	if err != nil {
 		fmt.Println(err)
