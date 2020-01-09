@@ -45,13 +45,17 @@ func main() {
 		log.Printf("Site was accessed from %s.", r.RemoteAddr)
 
 		for _, feed := range feeds {
-			rssFeeds := ParseFeeds(feed, proxy)
+			rssFeeds, err := ParseFeeds(feed, proxy)
 
-			// Print the title of the news site
-			fmt.Fprintf(w, "<p>%s </p>", rssFeeds.Title)
-			for _, rss := range rssFeeds.Items {
-				// Needs some more formatting!
-				fmt.Fprintf(w, "<a href=%s>%s</a> <br>", rss.Link, rss.Title)
+			if err != nil {
+				fmt.Println(err)
+			} else {
+				// Print the title of the news site
+				fmt.Fprintf(w, "<p>%s </p>", rssFeeds.Title)
+				for _, rss := range rssFeeds.Items {
+					// Needs some more formatting!
+					fmt.Fprintf(w, "<a href=%s>%s</a> <br>", rss.Link, rss.Title)
+				}
 			}
 		}
 	})
