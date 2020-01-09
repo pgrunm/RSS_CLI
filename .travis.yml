@@ -8,3 +8,5 @@ deploy:
   file: "RSS_CLI"
   skip_cleanup: true
   overwrite: true
+  on:
+    tags: true
