@@ -41,6 +41,8 @@ func ParseFeeds(siteURL, proxyURL string, news chan<- *gofeed.Feed) {
 		//  Type assertion see: https://golangcode.com/convert-interface-to-number/
 		news <- item.(*gofeed.Feed)
 	} else {
+		// rate limit the feed parsing
+		<-throttle
 
 		// Changed this to NewRequest as the golang docs says you need this for custom headers
 		req, err := http.NewRequest("GET", siteURL, nil)

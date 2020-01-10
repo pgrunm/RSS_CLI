@@ -19,6 +19,10 @@ var (
 
 	// Create a wait group
 	wg sync.WaitGroup
+
+	// Rate Limiting
+	rate     = time.Second / 10
+	throttle = time.Tick(rate)
 )
 
 func main() {
@@ -29,10 +33,6 @@ func main() {
 	viper.SetConfigType("yaml")
 	viper.AddConfigPath(".")
 	viper.WatchConfig()
-
-	// Rate Limiting
-	rate := time.Second / 10
-	throttle := time.Tick(rate)
 
 	// If config file is changed update all configuration values
 	viper.OnConfigChange(func(e fsnotify.Event) {
@@ -50,6 +50,7 @@ func main() {
 	proxy = viper.GetString("Proxy")
 
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		defer duration(track("Time for processing all sites "))
 		// Creating Channels
 		chNews := make(chan *gofeed.Feed, len(feeds))
 
@@ -57,7 +58,6 @@ func main() {
 		log.Printf("Site was accessed from %s.", r.RemoteAddr)
 
 		for _, feed := range feeds {
-			<-throttle // rate limit the feed parsing
 			wg.Add(1)
 			go ParseFeeds(feed, proxy, chNews)
 		}
@@ -66,6 +66,7 @@ func main() {
 		wg.Wait()
 		close(chNews)
 
+		defer duration(track("Time for rendering"))
 		for rssFeeds := range chNews {
 			// Print the title of the news site
 			fmt.Fprintf(w, "<p>%s </p>", rssFeeds.Title)
