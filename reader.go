@@ -51,28 +51,36 @@ func main() {
 
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		defer duration(track("Time for processing all sites "))
-		// Creating Channels
-		chNews := make(chan *gofeed.Feed, len(feeds))
+
+		// Creating a map for the returned feeds
+		m := make(map[string]chan *gofeed.Feed, len(feeds))
 
 		// Log to console that site was accessed
 		log.Printf("Site was accessed from %s.", r.RemoteAddr)
 
 		for _, feed := range feeds {
 			wg.Add(1)
-			go ParseFeeds(feed, proxy, chNews)
+			chNews := make(chan *gofeed.Feed, 1)
+			m[feed] = chNews
+			go ParseFeeds(feed, proxy, m[feed])
 		}
 
 		// Stop execution until the wait group is finished
 		wg.Wait()
-		close(chNews)
 
 		defer duration(track("Time for rendering"))
-		for rssFeeds := range chNews {
+
+		// Get the items for a feed by order they were mentioned in the configuration file.
+		for _, feed := range feeds {
+
+			// Close the channel and write the information from the channel to a variable.
+			close(m[feed])
+			rss := <-m[feed]
 			// Print the title of the news site
-			fmt.Fprintf(w, "<p>%s </p>", rssFeeds.Title)
-			for _, rss := range rssFeeds.Items {
-				// Needs some more formatting!
-				fmt.Fprintf(w, "<a href=%s>%s</a> <br>", rss.Link, rss.Title)
+			// Needs some more formatting!
+			fmt.Fprintf(w, "<p>%s </p>", rss.Title)
+			for _, rssFeeds := range rss.Items {
+				fmt.Fprintf(w, "<a href=%s>%s</a> <br>", rssFeeds.Link, rssFeeds.Title)
 			}
 		}
 	})
