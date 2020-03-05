@@ -10,6 +10,7 @@ import (
 	"github.com/fsnotify/fsnotify"
 	"github.com/mmcdole/gofeed"
 	"github.com/patrickmn/go-cache"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/spf13/viper"
 )
 
@@ -49,6 +50,10 @@ func main() {
 	feeds = viper.GetStringSlice("Feeds")
 	proxy = viper.GetString("Proxy")
 
+	// Adding the Prmetheus HTTP handler
+	http.Handle("/metrics", promhttp.Handler())
+	go http.ListenAndServe(":2112", nil)
+
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		defer duration(track("Time for processing all sites "))
 
@@ -84,6 +89,7 @@ func main() {
 			}
 		}
 	})
+
 	http.ListenAndServe(":80", nil)
 
 	// Notify about the started website
