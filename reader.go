@@ -54,6 +54,9 @@ func main() {
 	http.Handle("/metrics", promhttp.Handler())
 	go http.ListenAndServe(":2112", nil)
 
+	// Notify about the started website
+	log.Println("Service started: open http://127.0.0.1 in browser")
+
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		defer duration(track("Time for processing all sites "))
 
@@ -92,6 +95,4 @@ func main() {
 
 	http.ListenAndServe(":80", nil)
 
-	// Notify about the started website
-	log.Println("Service started: open http://127.0.0.1 in browser")
 }
