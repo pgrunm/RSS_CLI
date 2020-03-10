@@ -10,6 +10,8 @@ import (
 	"github.com/fsnotify/fsnotify"
 	"github.com/mmcdole/gofeed"
 	"github.com/patrickmn/go-cache"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promauto"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/spf13/viper"
 )
@@ -24,6 +26,20 @@ var (
 	// Rate Limiting
 	rate     = time.Second / 10
 	throttle = time.Tick(rate)
+
+	// Prometheus variables for metrics
+	opsProcessed = promauto.NewCounter(prometheus.CounterOpts{
+		Name: "rss_reader_total_requests",
+		Help: "The total number of processed events",
+	})
+	cacheHits = promauto.NewCounter(prometheus.CounterOpts{
+		Name: "total_number_of_cache_hits",
+		Help: "The total number of processed events answered by cache",
+	})
+	rssRequests = promauto.NewCounter(prometheus.CounterOpts{
+		Name: "total_number_of_rss_requests",
+		Help: "The total number of requests sent to get rss feeds",
+	})
 )
 
 func main() {
@@ -90,6 +106,7 @@ func main() {
 			for _, rssFeeds := range rss.Items {
 				fmt.Fprintf(w, "<a href=%s>%s</a> <br>", rssFeeds.Link, rssFeeds.Title)
 			}
+			opsProcessed.Inc()
 		}
 	})
 
