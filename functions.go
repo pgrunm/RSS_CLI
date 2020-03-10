@@ -40,9 +40,14 @@ func ParseFeeds(siteURL, proxyURL string, news chan<- *gofeed.Feed) {
 	if found {
 		//  Type assertion see: https://golangcode.com/convert-interface-to-number/
 		news <- item.(*gofeed.Feed)
+
+		// Increase the counter for cache hits
+		cacheHits.Inc()
 	} else {
 		// rate limit the feed parsing
 		<-throttle
+
+		rssRequests.Inc()
 
 		// Changed this to NewRequest as the golang docs says you need this for custom headers
 		req, err := http.NewRequest("GET", siteURL, nil)
