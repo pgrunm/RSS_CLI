@@ -40,6 +40,13 @@ var (
 		Name: "total_number_of_rss_requests",
 		Help: "The total number of requests sent to get rss feeds",
 	})
+
+	// See: https://godoc.org/github.com/prometheus/client_golang/prometheus#Summary
+	responseTime = prometheus.NewSummary(prometheus.SummaryOpts{
+		Name:       "response_time_summary",
+		Help:       "The sum of response times.",
+		Objectives: map[float64]float64{0.5: 0.05, 0.9: 0.01, 0.99: 0.001},
+	})
 )
 
 func main() {
@@ -106,8 +113,8 @@ func main() {
 			for _, rssFeeds := range rss.Items {
 				fmt.Fprintf(w, "<a href=%s>%s</a> <br>", rssFeeds.Link, rssFeeds.Title)
 			}
-			opsProcessed.Inc()
 		}
+		opsProcessed.Inc()
 	})
 
 	http.ListenAndServe(":80", nil)
