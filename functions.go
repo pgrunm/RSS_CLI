@@ -63,6 +63,7 @@ func ParseFeeds(siteURL, proxyURL string, news chan<- *gofeed.Feed) {
 
 		if err != nil {
 			fmt.Println(err)
+			exceptions.Inc()
 		} else {
 			defer resp.Body.Close()
 			if resp.StatusCode == 200 {
