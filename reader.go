@@ -47,6 +47,10 @@ var (
 		Help:       "The sum of response times.",
 		Objectives: map[float64]float64{0.5: 0.05, 0.9: 0.01, 0.99: 0.001},
 	})
+	exceptions = promauto.NewCounter(prometheus.CounterOpts{
+		Name: "rss_reader_total_http_errors",
+		Help: "The total number of errors when trying to get new RSS feeds.",
+	})
 )
 
 func main() {
