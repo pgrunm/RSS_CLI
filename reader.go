@@ -42,11 +42,11 @@ var (
 	})
 
 	// See: https://godoc.org/github.com/prometheus/client_golang/prometheus#Summary
-	responseTime = prometheus.NewSummary(prometheus.SummaryOpts{
-		Name:       "response_time_summary",
-		Help:       "The sum of response times.",
-		Objectives: map[float64]float64{0.5: 0.05, 0.9: 0.01, 0.99: 0.001},
-	})
+	responseTime = prometheus.NewHistogramVec(prometheus.HistogramOpts{
+		Name: "response_time_seconds",
+		Help: "Response time in seconds.",
+	}, []string{"code"})
+
 	exceptions = promauto.NewCounter(prometheus.CounterOpts{
 		Name: "rss_reader_total_http_errors",
 		Help: "The total number of errors when trying to get new RSS feeds.",
@@ -61,6 +61,8 @@ func main() {
 	viper.SetConfigType("yaml")
 	viper.AddConfigPath(".")
 	viper.WatchConfig()
+
+	prometheus.Register(responseTime)
 
 	// If config file is changed update all configuration values
 	viper.OnConfigChange(func(e fsnotify.Event) {
@@ -86,7 +88,7 @@ func main() {
 
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		defer duration(track("Time for processing all sites "))
-
+		start := time.Now()
 		// Creating a map for the returned feeds
 		m := make(map[string]chan *gofeed.Feed, len(feeds))
 
@@ -119,6 +121,9 @@ func main() {
 			}
 		}
 		opsProcessed.Inc()
+		// See more details in https://blog.alexellis.io/prometheus-monitoring/
+		durationSeconds := time.Since(start)
+		responseTime.WithLabelValues(fmt.Sprintf("%d", 200)).Observe(durationSeconds.Seconds())
 	})
 
 	http.ListenAndServe(":80", nil)
