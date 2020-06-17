@@ -56,6 +56,7 @@ var (
 func main() {
 	var feeds []string
 	var proxy string
+	var number int
 
 	viper.SetConfigName("config")
 	viper.SetConfigType("yaml")
@@ -69,6 +70,7 @@ func main() {
 		log.Println("Config file changed:", e.Name)
 		feeds = viper.GetStringSlice("Feeds")
 		proxy = viper.GetString("Proxy")
+		number = viper.GetInt("Number")
 	})
 
 	if err := viper.ReadInConfig(); err != nil {
@@ -78,6 +80,7 @@ func main() {
 	// Parse configuration
 	feeds = viper.GetStringSlice("Feeds")
 	proxy = viper.GetString("Proxy")
+	number = viper.GetInt("Number")
 
 	// Adding the Prmetheus HTTP handler
 	http.Handle("/metrics", promhttp.Handler())
@@ -109,15 +112,26 @@ func main() {
 
 		// Get the items for a feed by order they were mentioned in the configuration file.
 		for _, feed := range feeds {
+			// Counter allows limiting the number of displayed articles so that the lists are not that long.
+			counter := 0
 
 			// Close the channel and write the information from the channel to a variable.
 			close(m[feed])
 			rss := <-m[feed]
 			// Print the title of the news site
 			// Needs some more formatting!
-			fmt.Fprintf(w, "<p>%s </p>", rss.Title)
-			for _, rssFeeds := range rss.Items {
-				fmt.Fprintf(w, "<a href=%s>%s</a> <br>", rssFeeds.Link, rssFeeds.Title)
+			if rss != nil {
+				fmt.Fprintf(w, "<p><h3><a href=%s>%s</a></h3></p>", rss.Link, rss.Title)
+				for _, rssFeeds := range rss.Items {
+					if number == -1 {
+						fmt.Fprintf(w, "<a href=%s>%s</a> <br>", rssFeeds.Link, rssFeeds.Title)
+					} else if counter < number {
+						counter++
+						fmt.Fprintf(w, "<a href=%s>%s</a> <br>", rssFeeds.Link, rssFeeds.Title)
+					}
+				}
+			} else {
+				fmt.Printf("Error while accessing %s", feed)
 			}
 		}
 		opsProcessed.Inc()
