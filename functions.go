@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/base64"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -13,7 +14,7 @@ import (
 )
 
 // ParseFeeds allows to get feeds from a site.
-func ParseFeeds(siteURL, proxyURL string, news chan<- *gofeed.Feed) {
+func ParseFeeds(siteURL, proxyURL string, news chan<- *gofeed.Feed, ProxyUser string, ProxyPass string) {
 
 	// Measure the execution time of this function
 	defer duration(track("ParseFeeds for site " + siteURL))
@@ -31,7 +32,17 @@ func ParseFeeds(siteURL, proxyURL string, news chan<- *gofeed.Feed) {
 			fmt.Println(err)
 		}
 
-		client = http.Client{Transport: &http.Transport{Proxy: http.ProxyURL(proxyURL)}}
+		if len(ProxyPass) > 0 {
+			// Add Header with Proxy Username and Pass if inside config
+			auth := fmt.Sprintf("%s:%s", ProxyUser, ProxyPass)
+			basicAuth := "Basic " + base64.StdEncoding.EncodeToString([]byte(auth))
+			header := http.Header{}
+			header.Add("Proxy-Authorization", basicAuth)
+			client = http.Client{Transport: &http.Transport{Proxy: http.ProxyURL(proxyURL), ProxyConnectHeader: header}}
+		} else {
+			client = http.Client{Transport: &http.Transport{Proxy: http.ProxyURL(proxyURL)}}
+		}
+
 	} else {
 		client = http.Client{}
 	}
@@ -57,7 +68,6 @@ func ParseFeeds(siteURL, proxyURL string, news chan<- *gofeed.Feed) {
 
 		// Set a custom user header because some site block away default crawlers
 		req.Header.Set("User-Agent", "Golang/RSS_Reader by Warryz")
-
 		// Get the Feed of the particular website
 		resp, err := client.Do(req)
 

@@ -58,6 +58,10 @@ func main() {
 	var proxy string
 	var number int
 
+	// Proxy Auth configuration
+	var proxy_user string
+	var proxy_pass string
+
 	viper.SetConfigName("config")
 	viper.SetConfigType("yaml")
 	viper.AddConfigPath(".")
@@ -71,6 +75,8 @@ func main() {
 		feeds = viper.GetStringSlice("Feeds")
 		proxy = viper.GetString("Proxy")
 		number = viper.GetInt("Number")
+		proxy_user = viper.GetString("ProxyUser")
+		proxy_pass = viper.GetString("ProxyPass")
 	})
 
 	if err := viper.ReadInConfig(); err != nil {
@@ -81,6 +87,10 @@ func main() {
 	feeds = viper.GetStringSlice("Feeds")
 	proxy = viper.GetString("Proxy")
 	number = viper.GetInt("Number")
+
+	// Proxy Auth configuration
+	proxy_user = viper.GetString("ProxyUser")
+	proxy_pass = viper.GetString("ProxyPass")
 
 	// Adding the Prmetheus HTTP handler
 	http.Handle("/metrics", promhttp.Handler())
@@ -102,7 +112,7 @@ func main() {
 			wg.Add(1)
 			chNews := make(chan *gofeed.Feed, 1)
 			m[feed] = chNews
-			go ParseFeeds(feed, proxy, m[feed])
+			go ParseFeeds(feed, proxy, m[feed], proxy_user, proxy_pass)
 		}
 
 		// Stop execution until the wait group is finished
