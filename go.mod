@@ -6,7 +6,7 @@ require (
 	github.com/fsnotify/fsnotify v1.5.1
 	github.com/mmcdole/gofeed v1.1.3
 	github.com/patrickmn/go-cache v2.1.0+incompatible
-	github.com/prometheus/client_golang v1.11.0
+	github.com/prometheus/client_golang v1.11.1
 	github.com/spf13/viper v1.10.1
 )
 
